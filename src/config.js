@@ -3,5 +3,5 @@ export const config = {
   nombre: 'González Vargas Alfredo Zenif',
   usuarioGitHub: '321048729-GVZ',
   equipo: 'Equipo X',
-  negocio: 'Sistema de Inventario y gestión de negocios minoristas',
+  negocio: 'Sistema de Inventario y gestión de ventas para negocios minoristas',
 }

@@ -26,7 +26,18 @@ import { ESTADOS } from './datos.js'
 // Pista: prueba en la consola 0.1 + 0.2 y verás por qué hay que redondear.
 //        Math.round(x * 100) / 100
 export function totalPedido(pedido) {
-  return 0 // TODO
+  if (!pedido.items || pedido.items.length === 0) {
+    return 0;
+  }
+
+  const subtotal = pedido.items.reduce((suma, item) => {
+    return suma + (item.cantidad * item.precioUnitario);
+  }, 0);
+
+  const descuento = pedido.descuento || 0;
+  const total = subtotal * (1 - descuento);
+
+  return Math.round(total * 100) / 100;
 }
 
 // ----------------------------------------------------------------------------
@@ -39,7 +50,16 @@ export function totalPedido(pedido) {
 // Un estado que no existe también es false.
 // Pista: ESTADOS ya es un arreglo ordenado. ¿Qué te dice indexOf?
 export function puedeTransicionar(actual, nuevo) {
-  return true // TODO: hoy acepta cualquier cosa. ¿Qué tan grave sería eso en producción?
+  const indiceActual = ESTADOS.indexOf(actual);
+  const indiceNuevo = ESTADOS.indexOf(nuevo);
+
+  // Si alguno de los estados no existe en el arreglo, no es válido
+  if (indiceActual === -1 || indiceNuevo === -1) {
+    return false;
+  }
+
+  // El nuevo estado debe ser exactamente el siguiente posición (+1)
+  return indiceNuevo === indiceActual + 1;
 }
 
 // ----------------------------------------------------------------------------
@@ -54,7 +74,29 @@ export function puedeTransicionar(actual, nuevo) {
 //                         correo: algo@algo.algo   (el email es opcional)
 // Pista: '55 1234-5678'.replace(/[\s-]/g, '')   y   /^\d{10}$/.test(...)
 export function validarCliente(cliente) {
-  return [] // TODO
+  const errores = [];
+  const { nombre, telefono, email } = cliente || {};
+
+  // 1. Validar nombre_requerido
+  if (!nombre || nombre.trim() === '') {
+    errores.push('nombre_requerido');
+  }
+
+  // 2. Validar telefono_invalido
+  const telefonoLimpio = telefono ? String(telefono).replace(/[\s-]/g, '') : '';
+  if (!/^\d{10}$/.test(telefonoLimpio)) {
+    errores.push('telefono_invalido');
+  }
+
+  // 3. Validar email_invalido (opcional: solo si viene y no está vacío)
+  if (email && email.trim() !== '') {
+    const regexEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!regexEmail.test(email.trim())) {
+      errores.push('email_invalido');
+    }
+  }
+
+  return errores;
 }
 
 // ----------------------------------------------------------------------------
@@ -64,7 +106,22 @@ export function validarCliente(cliente) {
 //   { registrado: 3, en_preparacion: 3, listo: 2, entregado: 2 }
 // Con una lista vacía, todos van en 0.
 export function resumenPorEstado(pedidos) {
-  return {} // TODO
+  // Inicializamos el objeto con todos los estados en 0
+  const resumen = {};
+  ESTADOS.forEach(estado => {
+    resumen[estado] = 0;
+  });
+
+  // Contamos cuántos pedidos hay por cada estado
+  if (Array.isArray(pedidos)) {
+    pedidos.forEach(pedido => {
+      if (resumen.hasOwnProperty(pedido.estado)) {
+        resumen[pedido.estado]++;
+      }
+    });
+  }
+
+  return resumen;
 }
 
 // ----------------------------------------------------------------------------
@@ -76,7 +133,27 @@ export function resumenPorEstado(pedidos) {
 // Pista: 'Ramírez'.normalize('NFD').replace(/[̀-ͯ]/g, '')
 //        Investiga qué hace NFD. Es un problema real en sistemas en español.
 export function buscarPedidos(pedidos, texto) {
-  return [] // TODO
+  // Si el texto está vacío o solo contiene espacios, devuelve todos los pedidos
+  if (!texto || texto.trim() === '') {
+    return pedidos;
+  }
+
+  // Función auxiliar para quitar acentos y pasar a minúsculas
+  const normalizar = (cadena) =>
+    String(cadena || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+
+  const busqueda = normalizar(texto);
+
+  return pedidos.filter(pedido => {
+    const nombreCliente = typeof pedido.cliente === 'object'
+      ? pedido.cliente.nombre
+      : pedido.cliente;
+
+    return normalizar(nombreCliente).includes(busqueda);
+  });
 }
 
 // ----------------------------------------------------------------------------
@@ -88,5 +165,36 @@ export function buscarPedidos(pedidos, texto) {
 // Orden: total de mayor a menor; si empatan, por nombre alfabético.
 // Pista: un objeto acumulador, luego Object.entries, map y sort.
 export function topClientes(pedidos, n) {
-  return [] // TODO
+  const acumulador = {};
+
+  // Sumamos los totales gastados por cada cliente reutilizando totalPedido
+  pedidos.forEach(pedido => {
+    const nombreCliente = typeof pedido.cliente === 'object'
+      ? pedido.cliente.nombre
+      : pedido.cliente;
+
+    const total = totalPedido(pedido);
+
+    if (!acumulador[nombreCliente]) {
+      acumulador[nombreCliente] = 0;
+    }
+    acumulador[nombreCliente] += total;
+  });
+
+  // Convertimos a arreglo de objetos
+  const resultado = Object.entries(acumulador).map(([cliente, total]) => ({
+    cliente,
+    total: Math.round(total * 100) / 100
+  }));
+
+  // Ordenamos de mayor a menor total; si empatan, por orden alfabético
+  resultado.sort((a, b) => {
+    if (b.total !== a.total) {
+      return b.total - a.total;
+    }
+    return a.cliente.localeCompare(b.cliente);
+  });
+
+  // Devolvemos los primeros n clientes
+  return resultado.slice(0, n);
 }
