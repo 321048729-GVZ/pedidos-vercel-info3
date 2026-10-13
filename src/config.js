@@ -1,7 +1,7 @@
 // ✏️ PASO 0: llena tus datos. Se muestran en el encabezado de tu sitio publicado.
 export const config = {
-  nombre: 'Tu nombre completo',
-  usuarioGitHub: 'tu-usuario',
+  nombre: 'González Vargas Alfredo Zenif',
+  usuarioGitHub: '321048729-GVZ',
   equipo: 'Equipo X',
-  negocio: 'Nombre del negocio de tu equipo',
+  negocio: 'Sistema de Inventario y gestión de negocios minoristas',
 }
